@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Notion Schedule Sync</title>
+<style>
+:root{--bg:#0c0c0f;--card:#15151d;--card2:#1f1f2b;--line:#2a2a3d;--text:#e8e8f0;--muted:#85859e;--accent:#7c6af7;--ok:#4ecdc4;--bad:#ff6b6b}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,'Noto Sans KR',sans-serif}.wrap{max-width:1040px;margin:0 auto;padding:40px 20px}header{display:flex;align-items:center;gap:14px;margin-bottom:28px}.logo{width:44px;height:44px;border-radius:12px;background:var(--accent);display:grid;place-items:center;font-weight:800}h1{font-size:24px;margin:0}.dot{margin-left:auto;width:10px;height:10px;border-radius:50%;background:var(--muted)}.dot.connected{background:var(--ok);box-shadow:0 0 10px var(--ok)}.dot.error{background:var(--bad)}.panel{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:24px;margin-bottom:20px}.title{font-size:13px;letter-spacing:1.5px;text-transform:uppercase;color:#f7c26a;font-weight:700;margin-bottom:16px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}@media(max-width:720px){.grid{grid-template-columns:1fr}}.full{grid-column:1/-1}label{display:block;font-size:12px;color:var(--muted);margin-bottom:7px}input,textarea{width:100%;border:1px solid var(--line);border-radius:10px;background:#0f0f15;color:var(--text);padding:12px;font-size:14px}textarea{min-height:88px;resize:vertical}button{border:0;border-radius:10px;padding:11px 16px;cursor:pointer;font-weight:700}.primary{background:var(--accent);color:white}.secondary{background:var(--card2);color:var(--text);border:1px solid var(--line)}.danger{background:rgba(255,107,107,.12);color:#ff8f8f;border:1px solid rgba(255,107,107,.35)}.row{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}.alert{padding:12px 14px;border-radius:10px;margin-bottom:14px;font-size:14px;line-height:1.5}.info{background:rgba(124,106,247,.12);border:1px solid rgba(124,106,247,.35);color:#bdb5ff}.success{background:rgba(78,205,196,.12);border:1px solid rgba(78,205,196,.35);color:var(--ok)}.error{background:rgba(255,107,107,.12);border:1px solid rgba(255,107,107,.35);color:#ff8f8f}.toolbar{display:flex;align-items:center;gap:10px;margin:18px 0}.toolbar strong{flex:1}.muted{color:var(--muted);font-size:13px}.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}.item{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px}.item h3{margin:6px 0 12px;font-size:18px}.tag{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:4px 9px;font-size:12px;color:#f7c26a}.prop{display:flex;gap:10px;font-size:14px;margin:8px 0}.key{min-width:58px;color:var(--muted)}.empty{text-align:center;padding:60px 16px;color:var(--muted)}.hidden{display:none}.bar{height:3px;background:var(--line);border-radius:99px;overflow:hidden;flex:1}.fill{height:100%;background:var(--accent);width:0%}.auto{display:flex;align-items:center;gap:10px;margin-top:16px;color:var(--muted);font-size:13px}.pulse{width:7px;height:7px;border-radius:50%;background:var(--ok)}a{color:inherit;text-decoration:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header><div class="logo">N↗</div><h1>Notion Schedule Sync</h1><div id="statusDot" class="dot"></div></header>
+
+<section class="panel">
+  <div class="title">Notion 연결 설정</div>
+  <div id="alertBox"></div>
+  <div class="alert info">Notion DB 컬럼 권장값: <b>Name</b>(Title), <b>Date</b>(Date), <b>Status</b>(Status/Select), <b>Memo</b>(Rich text). Integration을 데이터베이스 Connections에 추가해야 합니다.</div>
+  <div class="grid">
+    <div class="full"><label>Database ID</label><input id="dbIdInput" placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"></div>
+    <div><label>자동 동기화 간격(초)</label><input id="intervalInput" type="number" min="10" max="300" value="30"></div>
+    <div><label>기본 상태값</label><input id="defaultStatusInput" value="예정"></div>
+  </div>
+  <div class="row"><button class="primary" id="connectBtn" onclick="connect()">연결하기</button><button class="secondary" onclick="clearData()">초기화</button></div>
+</section>
+
+<section class="panel hidden" id="editorPanel">
+  <div class="title">일정 등록 / 수정</div>
+  <input type="hidden" id="pageIdInput">
+  <div class="grid">
+    <div class="full"><label>일정 제목</label><input id="titleInput" placeholder="예: 고객 미팅"></div>
+    <div><label>날짜</label><input id="dateInput" type="date"></div>
+    <div><label>상태</label><input id="statusInput" placeholder="예정"></div>
+    <div class="full"><label>메모</label><textarea id="memoInput" placeholder="메모 입력"></textarea></div>
+  </div>
+  <div class="row"><button class="primary" id="saveBtn" onclick="saveSchedule()">일정 저장</button><button class="secondary" onclick="resetForm()">입력 초기화</button></div>
+</section>
+
+<div class="toolbar hidden" id="toolbar"><strong>일정 목록</strong><span id="syncInfo" class="muted">마지막 동기화: -</span><button class="secondary" onclick="fetchData(true)">동기화</button></div>
+<div id="content" class="empty">Notion과 연결하세요.</div>
+<div class="auto hidden" id="autoBar"><div class="pulse"></div><span id="autoLabel">자동 동기화</span><div class="bar"><div id="progressFill" class="fill"></div></div><span id="nextLabel">-초 후</span></div>
+</div>
+<script>
+let config={dbId:'',interval:30,defaultStatus:'예정'},items=[],syncTimer=null,progressTimer=null,progressStart=0;
+const $=id=>document.getElementById(id);
+function esc(v){return String(v??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;')}
+function show(msg,type='error'){$('alertBox').innerHTML=`<div class="alert ${type}">${msg}</div>`}
+function clearAlert(){$('alertBox').innerHTML=''}
+function setStatus(s){$('statusDot').className='dot '+s}
+function saveConfig(){localStorage.setItem('notion_schedule_config',JSON.stringify(config))}
+function loadConfig(){const s=localStorage.getItem('notion_schedule_config');if(s){config={...config,...JSON.parse(s)};$('dbIdInput').value=config.dbId;$('intervalInput').value=config.interval;$('defaultStatusInput').value=config.defaultStatus;$('statusInput').value=config.defaultStatus}else $('statusInput').value=config.defaultStatus}
+function clearData(){localStorage.removeItem('notion_schedule_config');localStorage.removeItem('notion_schedule_cache');location.reload()}
+async function api(action,payload={}){const res=await fetch('/api/notion',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,databaseId:config.dbId,...payload})});const data=await res.json().catch(()=>({}));if(!res.ok)throw new Error(data.message||`HTTP ${res.status}`);return data}
+function val(prop){if(!prop)return'';if(prop.type==='title')return prop.title?.map(t=>t.plain_text).join('')||'';if(prop.type==='rich_text')return prop.rich_text?.map(t=>t.plain_text).join('')||'';if(prop.type==='date')return prop.date?.start||'';if(prop.type==='status')return prop.status?.name||'';if(prop.type==='select')return prop.select?.name||'';return''}
+function byType(item,type){const p=item.properties||{};for(const k of Object.keys(p))if(p[k].type===type)return p[k];return null}
+function titleOf(i){return val(byType(i,'title'))||'Untitled'}
+function dateOf(i){return val(byType(i,'date'))}
+function statusOf(i){return val(byType(i,'status'))||val(byType(i,'select'))}
+function memoOf(i){return val(byType(i,'rich_text'))}
+async function connect(){config.dbId=$('dbIdInput').value.trim().replaceAll('-','');config.interval=parseInt($('intervalInput').value,10)||30;config.defaultStatus=$('defaultStatusInput').value.trim()||'예정';if(!config.dbId||config.dbId.length<32)return show('Database ID를 확인해주세요.');$('connectBtn').disabled=true;$('connectBtn').textContent='연결 중...';try{await fetchData(false);saveConfig();$('editorPanel').classList.remove('hidden');$('toolbar').classList.remove('hidden');$('autoBar').classList.remove('hidden');startAutoSync();show('연결 성공! Notion과 동기화되었습니다.','success');setTimeout(clearAlert,2000)}catch(e){show('연결 실패: '+esc(e.message));setStatus('error')}finally{$('connectBtn').disabled=false;$('connectBtn').textContent='연결하기'}}
+async function fetchData(manual=false){const data=await api('query');items=data.results||[];localStorage.setItem('notion_schedule_cache',JSON.stringify({items,ts:Date.now()}));render();$('syncInfo').textContent='마지막 동기화: '+new Date().toLocaleTimeString('ko-KR');setStatus('connected');if(manual){show('동기화 완료','success');setTimeout(clearAlert,1500)}}
+async function saveSchedule(){const pageId=$('pageIdInput').value,title=$('titleInput').value.trim(),date=$('dateInput').value,status=$('statusInput').value.trim()||config.defaultStatus,memo=$('memoInput').value.trim();if(!title)return show('일정 제목을 입력해주세요.');if(!date)return show('날짜를 선택해주세요.');$('saveBtn').disabled=true;try{if(pageId){await api('update',{pageId,title,date,status,memo});show('일정이 수정되었습니다.','success')}else{await api('create',{title,date,status,memo});show('일정이 Notion에 등록되었습니다.','success')}resetForm();await fetchData(false)}catch(e){show('저장 실패: '+esc(e.message))}finally{$('saveBtn').disabled=false}}
+function editItem(id){const i=items.find(x=>x.id===id);if(!i)return;$('pageIdInput').value=i.id;$('titleInput').value=titleOf(i);$('dateInput').value=dateOf(i).slice(0,10);$('statusInput').value=statusOf(i)||config.defaultStatus;$('memoInput').value=memoOf(i);$('saveBtn').textContent='일정 수정';scrollTo({top:$('editorPanel').offsetTop-20,behavior:'smooth'})}
+async function archiveItem(id){if(!confirm('이 일정을 Notion에서 삭제/보관 처리할까요?'))return;try{await api('delete',{pageId:id});show('삭제/보관 처리되었습니다.','success');await fetchData(false)}catch(e){show('삭제 실패: '+esc(e.message))}}
+function resetForm(){$('pageIdInput').value='';$('titleInput').value='';$('dateInput').value='';$('statusInput').value=config.defaultStatus;$('memoInput').value='';$('saveBtn').textContent='일정 저장'}
+function render(){if(!items.length){$('content').className='empty';$('content').innerHTML='일정이 없습니다.';return}$('content').className='cards';const sorted=[...items].sort((a,b)=>String(dateOf(a)).localeCompare(String(dateOf(b))));$('content').innerHTML=sorted.map(i=>{const url=i.url||`https://notion.so/${i.id.replaceAll('-','')}`;return `<div class="item"><span class="tag">${esc(statusOf(i)||'상태 없음')}</span><h3>${esc(titleOf(i))}</h3><div class="prop"><span class="key">Date</span><span>${esc(dateOf(i)||'-')}</span></div><div class="prop"><span class="key">Memo</span><span>${esc(memoOf(i)||'-')}</span></div><div class="row"><button class="secondary" onclick="editItem('${i.id}')">수정</button><button class="danger" onclick="archiveItem('${i.id}')">삭제</button><a href="${esc(url)}" target="_blank"><button class="secondary">Notion 열기</button></a></div></div>`}).join('')}
+function startAutoSync(){clearInterval(syncTimer);clearInterval(progressTimer);const interval=config.interval*1000;progressStart=Date.now();progressTimer=setInterval(()=>{const elapsed=Date.now()-progressStart;$('progressFill').style.width=Math.min(elapsed/interval*100,100)+'%';$('nextLabel').textContent=Math.max(0,Math.ceil((interval-elapsed)/1000))+'초 후'},500);syncTimer=setInterval(async()=>{try{await fetchData(false);progressStart=Date.now()}catch(e){setStatus('error')}},interval);$('autoLabel').textContent=`자동 동기화 ${config.interval}초마다`}
+loadConfig();if(config.dbId){$('editorPanel').classList.remove('hidden');$('toolbar').classList.remove('hidden');$('autoBar').classList.remove('hidden');const c=localStorage.getItem('notion_schedule_cache');if(c){try{items=JSON.parse(c).items||[];render()}catch(e){}}fetchData(false).then(startAutoSync).catch(()=>setStatus('error'))}
+</script>
+</body>
+</html>
